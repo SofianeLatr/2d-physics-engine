@@ -6,7 +6,7 @@ AABBTree::~AABBTree()
     destroy(root);
 }
 
-AABBTree::AABBNode* AABBTree::insert(Body* body,const AABB& box)
+AABBNode* AABBTree::insert(Body* body,const AABB& box)
 {
     AABBNode* node = new AABBNode;
 
