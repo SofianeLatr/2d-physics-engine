@@ -1,5 +1,5 @@
-#ifndef MATH_HPP
-#define MATH_HPP
+#ifndef BroadPhaseMath_HPP
+#define BroadPhaseMath_HPP
 
 #include "Body.hpp"
 #include <vector>

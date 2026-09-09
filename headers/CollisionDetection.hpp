@@ -3,6 +3,7 @@
 
 #include "Vec2.hpp"
 #include "Polygon.hpp"
+#include "BroadPhaseMath.hpp"
 #include <array>
 #include <algorithm>
 #include <limits>
@@ -12,10 +13,6 @@ struct CollisionInfo {
     Vec2 normal;
 };
 
-struct AABB {
-    Vec2 min;
-    Vec2 max;
-};
 
 template<int verticesA, int verticesB>
 CollisionInfo SAT(const std::array<Vec2, verticesA>& A, const std::array<Vec2, verticesB>& B)
