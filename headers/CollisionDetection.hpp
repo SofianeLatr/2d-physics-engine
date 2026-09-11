@@ -11,16 +11,24 @@
 struct CollisionInfo {
     float overlap;
     Vec2 normal;
+
+    int referenceEdge;
+    bool referenceIsA;
 };
 
 
 template<int verticesA, int verticesB>
-CollisionInfo SAT(const std::array<Vec2, verticesA>& A, const std::array<Vec2, verticesB>& B)
+CollisionInfo SAT(
+    const std::array<Vec2, verticesA>& A,
+    const std::array<Vec2, verticesB>& B)
 {
     float minOverlap = 0;
     Vec2 normal;
+    int referenceEdge = 0;
+    bool referenceIsA = true;
     bool first = true;
 
+    // Check A's edges
     for (int i = 0; i < verticesA; i++)
     {
         Vec2 edge = A[(i + 1) % verticesA] - A[i];
@@ -47,7 +55,7 @@ CollisionInfo SAT(const std::array<Vec2, verticesA>& A, const std::array<Vec2, v
         }
 
         if (maxA < minB || maxB < minA)
-            return {0, Vec2(0, 0)};
+            return {0, Vec2(0, 0), -1, true};
 
         float overlap = std::min(maxA, maxB) -
                         std::max(minA, minB);
@@ -56,10 +64,13 @@ CollisionInfo SAT(const std::array<Vec2, verticesA>& A, const std::array<Vec2, v
         {
             minOverlap = overlap;
             normal = axis;
+            referenceEdge = i;
+            referenceIsA = true;
             first = false;
         }
     }
 
+    // Check B's edges
     for (int i = 0; i < verticesB; i++)
     {
         Vec2 edge = B[(i + 1) % verticesB] - B[i];
@@ -86,7 +97,7 @@ CollisionInfo SAT(const std::array<Vec2, verticesA>& A, const std::array<Vec2, v
         }
 
         if (maxA < minB || maxB < minA)
-            return {0, Vec2(0, 0)};
+            return {0, Vec2(0, 0), -1, false};
 
         float overlap = std::min(maxA, maxB) -
                         std::max(minA, minB);
@@ -95,6 +106,8 @@ CollisionInfo SAT(const std::array<Vec2, verticesA>& A, const std::array<Vec2, v
         {
             minOverlap = overlap;
             normal = axis;
+            referenceEdge = i;
+            referenceIsA = false;
             first = false;
         }
     }
@@ -104,7 +117,99 @@ CollisionInfo SAT(const std::array<Vec2, verticesA>& A, const std::array<Vec2, v
     if (direction * normal < 0)
         normal *= -1;
 
-    return {minOverlap, normal};
+    return {
+        minOverlap,
+        normal,
+        referenceEdge,
+        referenceIsA
+    };
+}
+
+template<int verticesA, int verticesB>
+std::pair<int, std::array<Vec2, 2>> getContactPoints(
+    const std::array<Vec2, verticesA>& A,
+    const std::array<Vec2, verticesB>& B,
+    const CollisionInfo& info)
+{
+    const auto& reference = info.referenceIsA ? A : B;
+    const auto& incident  = info.referenceIsA ? B : A;
+
+    int referenceEdge = info.referenceEdge;
+
+    Vec2 r1 = reference[referenceEdge];
+    Vec2 r2 = reference[(referenceEdge + 1) % reference.size()];
+
+    Vec2 referenceNormal = info.normal;
+
+    // Find incident edge
+    int incidentEdge = 0;
+    float minDot = 999999;
+
+    for (int i = 0; i < incident.size(); i++)
+    {
+        Vec2 edge = incident[(i + 1) % incident.size()] - incident[i];
+        Vec2 edgeNormal = edge.normal();
+
+        float d = edgeNormal * referenceNormal;
+
+        if (d < minDot)
+        {
+            minDot = d;
+            incidentEdge = i;
+        }
+    }
+
+    Vec2 i1 = incident[incidentEdge];
+    Vec2 i2 = incident[(incidentEdge + 1) % incident.size()];
+
+    // Reference edge direction
+    Vec2 side = r2 - r1;
+    side.normalize();
+
+    // Clip against first side
+    float d1 = (i1 - r1) * side;
+    float d2 = (i2 - r1) * side;
+
+    if (d1 < 0 && d2 < 0)
+        return {0, {}};
+
+    if (d1 < 0)
+        i1 = i1 + (i2 - i1) * (-d1 / (d2 - d1));
+
+    if (d2 < 0)
+        i2 = i2 + (i1 - i2) * (-d2 / (d1 - d2));
+
+    // Clip against second side
+    float maxSide = (r2 - r1) * side;
+
+    d1 = (i1 - r1) * side;
+    d2 = (i2 - r1) * side;
+
+    if (d1 > maxSide && d2 > maxSide)
+        return {0, {}};
+
+    if (d1 > maxSide)
+        i1 = i1 + (i2 - i1) * ((maxSide - d1) / (d2 - d1));
+
+    if (d2 > maxSide)
+        i2 = i2 + (i1 - i2) * ((maxSide - d2) / (d1 - d2));
+
+    // Keep only points behind reference face
+    float faceDistance = r1 * referenceNormal;
+
+    float depth1 = i1 * referenceNormal - faceDistance;
+    float depth2 = i2 * referenceNormal - faceDistance;
+
+    std::array<Vec2, 2> contacts;
+    int count = 0;
+
+    if (depth1 <= 0)
+        contacts[count++] = i1;
+
+    if (depth2 <= 0)
+        contacts[count++] = i2;
+
+    return {count, contacts};
 }
 
 template<int N>
@@ -134,5 +239,6 @@ bool AABBcollision(const AABB& A, const AABB& B)
 
     return true;
 }
+
 
 #endif
