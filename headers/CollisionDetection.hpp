@@ -70,7 +70,6 @@ CollisionInfo SAT(
         }
     }
 
-    // Check B's edges
     for (int i = 0; i < verticesB; i++)
     {
         Vec2 edge = B[(i + 1) % verticesB] - B[i];
