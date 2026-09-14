@@ -1,5 +1,5 @@
-#ifndef COLLISION_DETECTION_HPP
-#define COLLISION_DETECTION_HPP
+#ifndef ColisionDetection_HPP
+#define ColisionDetection_HPP
 
 #include "Vec2.hpp"
 #include "Polygon.hpp"
