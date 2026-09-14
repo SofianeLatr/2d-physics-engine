@@ -16,5 +16,7 @@ int main() {
         std::cout << "No collision detected." << std::endl;
     }
 
+    std::cin.get(); // Wait for user input before closing the console window
+
     return 0;
 }

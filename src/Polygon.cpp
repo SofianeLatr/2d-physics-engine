@@ -4,7 +4,6 @@ template<int N>
 Polygon<N>::~Polygon() {};
 template<int N>
 Polygon<N>::Polygon(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic) : Body(pos, angle, mass, isStatic) {};
-Rect::~Rect() {};
 Rect::Rect(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic) : Polygon<4>(pos, size, angle, mass, isStatic), size(size) {
     this->getPoints();
     inertia = this->getInertia();
