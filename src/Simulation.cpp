@@ -1,6 +1,4 @@
-include "CollisionDetection.hpp"
-#include "BroadPhaseMath.hpp"J
-#include <iostream>
+#include "Simulation.hpp"
 
 int main() {
     std::array<Vec2, 4> A = {Vec2(0, 0), Vec2(1, 0), Vec2(1, 1), Vec2(0, 1)};
