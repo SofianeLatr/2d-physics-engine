@@ -212,17 +212,17 @@ std::pair<int, std::array<Vec2, 2>> getContactPoints(
 }
 
 template<int N>
-AABB getAABB(const Polygon<N>& polygon)
+AABB getAABB(const std::array<Vec2, N>& polygon)
 {
     AABB box;
-    box.min = polygon.points[0];
-    box.max = polygon.points[0];
+    box.min = polygon[0];
+    box.max = polygon[0];
 
     for(int i = 1; i < N; i++) {
-        box.min.x = std::min(box.min.x, polygon.points[i].x);
-        box.min.y = std::min(box.min.y, polygon.points[i].y);
-        box.max.x = std::max(box.max.x, polygon.points[i].x);
-        box.max.y = std::max(box.max.y, polygon.points[i].y);
+        box.min.x = std::min(box.min.x, polygon[i].x);
+        box.min.y = std::min(box.min.y, polygon[i].y);
+        box.max.x = std::max(box.max.x, polygon[i].x);
+        box.max.y = std::max(box.max.y, polygon[i].y);
     }
 
     return box;
