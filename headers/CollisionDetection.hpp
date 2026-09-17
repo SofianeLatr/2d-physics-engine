@@ -131,25 +131,26 @@ std::pair<int, std::array<Vec2, 2>> getContactPoints(
     const CollisionInfo& info)
 {
     const auto& reference = info.referenceIsA ? A : B;
-    const auto& incident  = info.referenceIsA ? B : A;
+    const auto& incident = info.referenceIsA ? B : A;
 
-    int referenceEdge = info.referenceEdge;
+    int edge = info.referenceEdge;
 
-    Vec2 r1 = reference[referenceEdge];
-    Vec2 r2 = reference[(referenceEdge + 1) % reference.size()];
+    Vec2 r1 = reference[edge];
+    Vec2 r2 = reference[(edge + 1) % reference.size()];
 
-    Vec2 referenceNormal = info.normal;
+    Vec2 refNormal = info.normal;
 
-    // Find incident edge
+    Vec2 side = r2 - r1;
+    side.normalize();
+
     int incidentEdge = 0;
     float minDot = 999999;
 
     for (int i = 0; i < incident.size(); i++)
     {
-        Vec2 edge = incident[(i + 1) % incident.size()] - incident[i];
-        Vec2 edgeNormal = edge.normal();
-
-        float d = edgeNormal * referenceNormal;
+        Vec2 e = incident[(i + 1) % incident.size()] - incident[i];
+        Vec2 n = e.normal();
+        float d = n * refNormal;
 
         if (d < minDot)
         {
@@ -161,51 +162,50 @@ std::pair<int, std::array<Vec2, 2>> getContactPoints(
     Vec2 i1 = incident[incidentEdge];
     Vec2 i2 = incident[(incidentEdge + 1) % incident.size()];
 
-    // Reference edge direction
-    Vec2 side = r2 - r1;
-    side.normalize();
+    float offset1 = (i1 - r1) * side;
+    float offset2 = (i2 - r1) * side;
 
-    // Clip against first side
-    float d1 = (i1 - r1) * side;
-    float d2 = (i2 - r1) * side;
+    if (offset1 < 0)
+    {
+        float t = offset1 / (offset1 - offset2);
+        i1 = i1 + (i2 - i1) * t;
+    }
 
-    if (d1 < 0 && d2 < 0)
-        return {0, {}};
+    if (offset2 < 0)
+    {
+        float t = offset2 / (offset2 - offset1);
+        i2 = i2 + (i1 - i2) * t;
+    }
 
-    if (d1 < 0)
-        i1 = i1 + (i2 - i1) * (-d1 / (d2 - d1));
+    float maxOffset = (r2 - r1) * side;
 
-    if (d2 < 0)
-        i2 = i2 + (i1 - i2) * (-d2 / (d1 - d2));
+    offset1 = (i1 - r1) * side;
+    offset2 = (i2 - r1) * side;
 
-    // Clip against second side
-    float maxSide = (r2 - r1) * side;
+    if (offset1 > maxOffset)
+    {
+        float t = (offset1 - maxOffset) / (offset1 - offset2);
+        i1 = i1 + (i2 - i1) * t;
+    }
 
-    d1 = (i1 - r1) * side;
-    d2 = (i2 - r1) * side;
-
-    if (d1 > maxSide && d2 > maxSide)
-        return {0, {}};
-
-    if (d1 > maxSide)
-        i1 = i1 + (i2 - i1) * ((maxSide - d1) / (d2 - d1));
-
-    if (d2 > maxSide)
-        i2 = i2 + (i1 - i2) * ((maxSide - d2) / (d1 - d2));
-
-    // Keep only points behind reference face
-    float faceDistance = r1 * referenceNormal;
-
-    float depth1 = i1 * referenceNormal - faceDistance;
-    float depth2 = i2 * referenceNormal - faceDistance;
+    if (offset2 > maxOffset)
+    {
+        float t = (offset2 - maxOffset) / (offset2 - offset1);
+        i2 = i2 + (i1 - i2) * t;
+    }
 
     std::array<Vec2, 2> contacts;
     int count = 0;
 
-    if (depth1 <= 0)
+    float faceDistance = r1 * refNormal;
+
+    float depth1 = i1 * refNormal - faceDistance;
+    float depth2 = i2 * refNormal - faceDistance;
+
+    if (depth1 <= info.overlap)
         contacts[count++] = i1;
 
-    if (depth2 <= 0)
+    if (depth2 <= info.overlap && count < 2)
         contacts[count++] = i2;
 
     return {count, contacts};
