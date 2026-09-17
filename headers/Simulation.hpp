@@ -5,6 +5,17 @@
 #include "BroadPhaseMath.hpp"
 #include <iostream>
 
-int main();
+class Simulation {
+public:
+
+    std::vector<Body*> bodies;
+    float dt;
+    int iterations = 10;
+
+    Simulation();
+    ~Simulation();
+
+    int main();
+};
 
 #endif

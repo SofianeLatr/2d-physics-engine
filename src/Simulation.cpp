@@ -1,6 +1,8 @@
 #include "Simulation.hpp"
 
-int main() {
+
+
+int Simulation::main() {
     std::array<Vec2, 4> A = {
     Vec2(-1, -1),
     Vec2(1, -1),
