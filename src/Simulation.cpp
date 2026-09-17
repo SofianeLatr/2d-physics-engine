@@ -1,8 +1,19 @@
 #include "Simulation.hpp"
 
 int main() {
-    std::array<Vec2, 4> A = {Vec2(0, 0), Vec2(1, 0), Vec2(1, 1), Vec2(0, 1)};
-    std::array<Vec2, 4> B = {Vec2(0.5, 0.5), Vec2(1.5, 0.5), Vec2(1.5, 1.5), Vec2(0.5, 1.5)};
+    std::array<Vec2, 4> A = {
+    Vec2(-1, -1),
+    Vec2(1, -1),
+    Vec2(1, 1),
+    Vec2(-1, 1)
+    };
+
+    std::array<Vec2, 4> B = {
+        Vec2(0, -1),
+        Vec2(2, -1),
+        Vec2(2, 1),
+        Vec2(0, 1)
+    };
 
     AABB boxA = getAABB<A.size()>(A);
     AABB boxB = getAABB<B.size()>(B);
