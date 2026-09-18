@@ -15,6 +15,15 @@ public:
     Simulation();
     ~Simulation();
 
+    void addBody(Body* body);
+    void removeBody(Body* body);
+    
+    void simulate(float dt);
+    void checkCollisions();
+    void solveConstrains();
+    void applyForces();
+    void updatePositions();
+
     int main();
 };
 
