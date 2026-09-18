@@ -1,5 +1,28 @@
 #include "Simulation.hpp"
 
+Simulation::~Simulation() {}
+Simulation::Simulation() {}
+
+void Simulation::addBody(Body* body) {
+    bodies.push_back(body);
+}
+
+void Simulation::simulate(float dt) {
+    this->dt = dt;
+    
+
+    this->dt /= (float)iterations;
+    for(int i = 0; i < iterations; i++) {
+        checkCollisions();
+        solveConstrains();
+        applyForces();
+        updatePositions();
+    }
+    for(auto body : bodies) {
+        body->force = Vec2(0,0);
+        body->torque = 0;
+    }    
+}
 
 
 int Simulation::main() {
