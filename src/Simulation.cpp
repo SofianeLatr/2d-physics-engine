@@ -36,11 +36,9 @@ void Simulation::checkCollisions()
             if (A->isStatic && B->isStatic)
                 continue;
 
-            Polygon<4>* polyA = dynamic_cast<Polygon<4>*>(A);
-            Polygon<4>* polyB = dynamic_cast<Polygon<4>*>(B);
-
-            if (!polyA || !polyB)
-                continue;
+                
+            Polygon<4>* polyA = static_cast<Polygon<4>*>(A);
+            Polygon<4>* polyB = static_cast<Polygon<4>*>(B);
 
             auto pointsA = polyA->getPoints();
             auto pointsB = polyB->getPoints();

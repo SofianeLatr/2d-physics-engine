@@ -10,6 +10,8 @@ public:
     static const int verticies = N;
     std::array<Vec2, N> points;
 
+    const std::array<Vec2, N>& getPoints();
+    
     Polygon(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic);
     ~Polygon();
 };
