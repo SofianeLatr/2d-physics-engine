@@ -3,6 +3,7 @@
 
 #include "CollisionDetection.hpp"
 #include "BroadPhaseMath.hpp"
+#include "Polygon.hpp"
 #include <iostream>
 
 class Simulation {

@@ -9,6 +9,10 @@ Rect::Rect(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic) : Polygo
     inertia = this->getInertia();
 };
 
+const std::array<Vec2,4>& Polygon<4>::getPoints()  {
+    return points;
+}
+
 const std::array<Vec2,4>& Rect::getPoints()  {
     points[0] = Vec2(-size.x / 2,-size.y / 2);
     points[1] = Vec2(+size.x / 2,-size.y / 2);

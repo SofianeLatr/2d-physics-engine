@@ -24,6 +24,48 @@ void Simulation::simulate(float dt) {
     }    
 }
 
+void Simulation::checkCollisions()
+{
+    for (int i = 0; i < bodies.size(); i++)
+    {
+        for (int j = i + 1; j < bodies.size(); j++)
+        {
+            Body* A = bodies[i];
+            Body* B = bodies[j];
+
+            if (A->isStatic && B->isStatic)
+                continue;
+
+            Polygon<4>* polyA = dynamic_cast<Polygon<4>*>(A);
+            Polygon<4>* polyB = dynamic_cast<Polygon<4>*>(B);
+
+            if (!polyA || !polyB)
+                continue;
+
+            auto pointsA = polyA->getPoints();
+            auto pointsB = polyB->getPoints();
+
+            AABB boxA = getAABB<4>(pointsA);
+            AABB boxB = getAABB<4>(pointsB);
+
+            if (!AABBcollision(boxA, boxB))
+                continue;
+
+            CollisionInfo info = SAT<4, 4>(pointsA, pointsB);
+
+            if (info.overlap > 0)
+            {
+                std::cout << "Collision detected!\n";
+
+                auto contacts =
+                    getContactPoints<4, 4>(pointsA, pointsB, info);
+
+                std::cout << "Contacts: "
+                          << contacts.first << "\n";
+            }
+        }
+    }
+}
 
 int Simulation::main() {
     std::array<Vec2, 4> A = {
