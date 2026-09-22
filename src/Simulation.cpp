@@ -103,6 +103,18 @@ void Simulation::solveConstrains() {
     collisionPairs.clear();
 }
 
+void Simulation::applyForces() {
+    for(auto body : bodies) {
+        if(body->isStatic)
+            continue;
+
+        Vec2 acceleration = body->force * body->invMass;
+        float angAcceleration = body->torque * body->invInertia;
+
+        body->vel += acceleration * dt;
+        body->angVel += angAcceleration * dt;
+    }
+}
 int Simulation::main() {
 
     std::vector<Vec2> A = {
