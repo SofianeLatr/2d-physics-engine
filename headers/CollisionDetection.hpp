@@ -10,8 +10,8 @@
 #include <utility>
 
 struct CollisionInfo {
-    const Polygon* A;
-    const Polygon* B;
+    Polygon* A;
+    Polygon* B;
 
     float overlap;
     Vec2 normal;
@@ -20,10 +20,10 @@ struct CollisionInfo {
     bool referenceIsA;
 };
 
-CollisionInfo SAT(const Polygon& A, const Polygon& B)
+CollisionInfo SAT(Polygon& A, Polygon& B)
 {
-    const std::vector<Vec2>& pointsA = const_cast<Polygon&>(A).getPoints();
-    const std::vector<Vec2>& pointsB = const_cast<Polygon&>(B).getPoints();
+    const std::vector<Vec2>& pointsA = A.getPoints();
+    const std::vector<Vec2>& pointsB = B.getPoints();
 
     float minOverlap = 0;
     Vec2 normal;
@@ -43,7 +43,6 @@ CollisionInfo SAT(const Polygon& A, const Polygon& B)
         for (const Vec2& point : pointsA)
         {
             float projection = point * axis;
-
             minA = std::min(minA, projection);
             maxA = std::max(maxA, projection);
         }
@@ -54,7 +53,6 @@ CollisionInfo SAT(const Polygon& A, const Polygon& B)
         for (const Vec2& point : pointsB)
         {
             float projection = point * axis;
-
             minB = std::min(minB, projection);
             maxB = std::max(maxB, projection);
         }
@@ -96,7 +94,6 @@ CollisionInfo SAT(const Polygon& A, const Polygon& B)
         for (const Vec2& point : pointsA)
         {
             float projection = point * axis;
-
             minA = std::min(minA, projection);
             maxA = std::max(maxA, projection);
         }
@@ -107,7 +104,6 @@ CollisionInfo SAT(const Polygon& A, const Polygon& B)
         for (const Vec2& point : pointsB)
         {
             float projection = point * axis;
-
             minB = std::min(minB, projection);
             maxB = std::max(maxB, projection);
         }
@@ -157,13 +153,13 @@ std::pair<int, std::vector<Vec2>> getContactPoints(
 {
     const std::vector<Vec2>& reference =
         info.referenceIsA
-            ? const_cast<Polygon*>(info.A)->Polygon::getPoints()
-            : const_cast<Polygon*>(info.B)->Polygon::getPoints();
+        ? info.A->getPoints()
+        : info.B->getPoints();
 
     const std::vector<Vec2>& incident =
         info.referenceIsA
-            ? const_cast<Polygon*>(info.B)->Polygon::getPoints()
-            : const_cast<Polygon*>(info.A)->Polygon::getPoints();
+        ? info.B->getPoints()
+        : info.A->getPoints();
 
     int edge = info.referenceEdge;
 
