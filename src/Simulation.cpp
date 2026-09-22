@@ -1,111 +1,282 @@
-#include "Simulation.hpp"
+#ifndef COLLISIONDETECTION_HPP
+#define COLLISIONDETECTION_HPP
 
-Simulation::~Simulation() {}
-Simulation::Simulation() {}
+#include "Vec2.hpp"
+#include "Polygon.hpp"
+#include "BroadPhaseMath.hpp"
 
-void Simulation::addBody(Body* body) {
-    bodies.push_back(body);
-}
+#include <vector>
+#include <algorithm>
+#include <utility>
 
-void Simulation::simulate(float dt) {
-    this->dt = dt;
-    
+struct CollisionInfo {
+    Polygon* A;
+    Polygon* B;
 
-    this->dt /= (float)iterations;
-    for(int i = 0; i < iterations; i++) {
-        checkCollisions();
-        solveConstrains();
-        applyForces();
-        updatePositions();
-    }
-    for(auto body : bodies) {
-        body->force = Vec2(0,0);
-        body->torque = 0;
-    }    
-}
+    float overlap;
+    Vec2 normal;
 
-void Simulation::checkCollisions()
+    int referenceEdge;
+    bool referenceIsA;
+};
+
+CollisionInfo SAT(Polygon& A, Polygon& B)
 {
-    for (int i = 0; i < bodies.size(); i++)
+    const std::vector<Vec2>& pointsA = A.getPoints();
+    const std::vector<Vec2>& pointsB = B.getPoints();
+
+    float minOverlap = 0;
+    Vec2 normal;
+    int referenceEdge = 0;
+    bool referenceIsA = true;
+    bool first = true;
+
+    for (int i = 0; i < pointsA.size(); i++)
     {
-        for (int j = i + 1; j < bodies.size(); j++)
+        Vec2 edge = pointsA[(i + 1) % pointsA.size()] - pointsA[i];
+        Vec2 axis = edge.normal();
+        axis.normalize();
+
+        float minA = pointsA[0] * axis;
+        float maxA = minA;
+
+        for (const Vec2& point : pointsA)
         {
-            Body* A = bodies[i];
-            Body* B = bodies[j];
+            float projection = point * axis;
+            minA = std::min(minA, projection);
+            maxA = std::max(maxA, projection);
+        }
 
-            if (A->isStatic && B->isStatic)
-                continue;
+        float minB = pointsB[0] * axis;
+        float maxB = minB;
 
-                
-            Polygon<4>* polyA = static_cast<Polygon<4>*>(A);
-            Polygon<4>* polyB = static_cast<Polygon<4>*>(B);
+        for (const Vec2& point : pointsB)
+        {
+            float projection = point * axis;
+            minB = std::min(minB, projection);
+            maxB = std::max(maxB, projection);
+        }
 
-            auto pointsA = polyA->getPoints();
-            auto pointsB = polyB->getPoints();
+        if (maxA < minB || maxB < minA)
+        {
+            return {
+                &A,
+                &B,
+                0,
+                Vec2(0, 0),
+                -1,
+                true
+            };
+        }
 
-            AABB boxA = getAABB<4>(pointsA);
-            AABB boxB = getAABB<4>(pointsB);
+        float overlap = std::min(maxA, maxB) -
+                        std::max(minA, minB);
 
-            if (!AABBcollision(boxA, boxB))
-                continue;
-
-            CollisionInfo info = SAT<4, 4>(pointsA, pointsB);
-
-            if (info.overlap > 0)
-            {
-                std::cout << "Collision detected!\n";
-
-                auto contacts =
-                    getContactPoints<4, 4>(pointsA, pointsB, info);
-
-                std::cout << "Contacts: "
-                          << contacts.first << "\n";
-            }
+        if (first || overlap < minOverlap)
+        {
+            minOverlap = overlap;
+            normal = axis;
+            referenceEdge = i;
+            referenceIsA = true;
+            first = false;
         }
     }
-}
 
-int Simulation::main() {
-    std::array<Vec2, 4> A = {
-    Vec2(-1, -1),
-    Vec2(1, -1),
-    Vec2(1, 1),
-    Vec2(-1, 1)
-    };
-
-    std::array<Vec2, 4> B = {
-        Vec2(0, -1),
-        Vec2(2, -1),
-        Vec2(2, 1),
-        Vec2(0, 1)
-    };
-
-    AABB boxA = getAABB<A.size()>(A);
-    AABB boxB = getAABB<B.size()>(B);
-
-    if (AABBcollision(boxA, boxB))
+    for (int i = 0; i < pointsB.size(); i++)
     {
-        std::cout << "AABBs are colliding, proceeding to SAT test..." << std::endl;
+        Vec2 edge = pointsB[(i + 1) % pointsB.size()] - pointsB[i];
+        Vec2 axis = edge.normal();
+        axis.normalize();
+
+        float minA = pointsA[0] * axis;
+        float maxA = minA;
+
+        for (const Vec2& point : pointsA)
+        {
+            float projection = point * axis;
+            minA = std::min(minA, projection);
+            maxA = std::max(maxA, projection);
+        }
+
+        float minB = pointsB[0] * axis;
+        float maxB = minB;
+
+        for (const Vec2& point : pointsB)
+        {
+            float projection = point * axis;
+            minB = std::min(minB, projection);
+            maxB = std::max(maxB, projection);
+        }
+
+        if (maxA < minB || maxB < minA)
+        {
+            return {
+                &A,
+                &B,
+                0,
+                Vec2(0, 0),
+                -1,
+                false
+            };
+        }
+
+        float overlap = std::min(maxA, maxB) -
+                        std::max(minA, minB);
+
+        if (first || overlap < minOverlap)
+        {
+            minOverlap = overlap;
+            normal = axis;
+            referenceEdge = i;
+            referenceIsA = false;
+            first = false;
+        }
     }
-    CollisionInfo info = SAT<A.size(), B.size()>(A, B);
 
-    if (info.overlap > 0) {
-        std::cout << "Collision detected!" << std::endl;
-        std::cout << "Overlap: " << info.overlap << std::endl;
-        std::cout << "Normal: (" << info.normal.x << ", " << info.normal.y << ")" << std::endl;
-        std::cout << "Reference Edge: " << info.referenceEdge << std::endl;
-        std::cout << "Reference is A: " << (info.referenceIsA ? "true" : "false") << std::endl;
-        
-        auto contactPoints = getContactPoints<A.size(), B.size()>(A, B, info);
-        std::cout << "Number of contact points: " << contactPoints.first << std::endl;
-        for (int i = 0; i < contactPoints.first; ++i) {
-            std::cout << "Contact Point " << i + 1 << ": (" << contactPoints.second[i].x << ", " << contactPoints.second[i].y << ")" << std::endl;
-        }   
-    } else {
-        std::cout << "No collision detected." << std::endl;
-    }
+    Vec2 direction = B.pos - A.pos;
 
-    std::cin.get(); // Wait for user input before closing the console window
+    if (direction * normal < 0)
+        normal *= -1;
 
-    return 0;
+    return {
+        &A,
+        &B,
+        minOverlap,
+        normal,
+        referenceEdge,
+        referenceIsA
+    };
 }
+
+std::pair<int, std::vector<Vec2>> getContactPoints(
+    const CollisionInfo& info)
+{
+    const std::vector<Vec2>& reference =
+        info.referenceIsA
+        ? info.A->getPoints()
+        : info.B->getPoints();
+
+    const std::vector<Vec2>& incident =
+        info.referenceIsA
+        ? info.B->getPoints()
+        : info.A->getPoints();
+
+    int edge = info.referenceEdge;
+
+    Vec2 r1 = reference[edge];
+    Vec2 r2 = reference[(edge + 1) % reference.size()];
+
+    Vec2 refNormal = info.normal;
+
+    Vec2 side = r2 - r1;
+    side.normalize();
+
+    int incidentEdge = 0;
+    float minDot = 999999;
+
+    for (int i = 0; i < incident.size(); i++)
+    {
+        Vec2 edgeVector =
+            incident[(i + 1) % incident.size()] - incident[i];
+
+        Vec2 normal = edgeVector.normal();
+        normal.normalize();
+
+        float dot = normal * refNormal;
+
+        if (dot < minDot)
+        {
+            minDot = dot;
+            incidentEdge = i;
+        }
+    }
+
+    Vec2 i1 = incident[incidentEdge];
+    Vec2 i2 = incident[(incidentEdge + 1) % incident.size()];
+
+    float offset1 = (i1 - r1) * side;
+    float offset2 = (i2 - r1) * side;
+
+    if (offset1 < 0)
+    {
+        float t = offset1 / (offset1 - offset2);
+        i1 = i1 + (i2 - i1) * t;
+    }
+
+    if (offset2 < 0)
+    {
+        float t = offset2 / (offset2 - offset1);
+        i2 = i2 + (i1 - i2) * t;
+    }
+
+    float maxOffset = (r2 - r1) * side;
+
+    offset1 = (i1 - r1) * side;
+    offset2 = (i2 - r1) * side;
+
+    if (offset1 > maxOffset)
+    {
+        float t = (offset1 - maxOffset) /
+                  (offset1 - offset2);
+
+        i1 = i1 + (i2 - i1) * t;
+    }
+
+    if (offset2 > maxOffset)
+    {
+        float t = (offset2 - maxOffset) /
+                  (offset2 - offset1);
+
+        i2 = i2 + (i1 - i2) * t;
+    }
+
+    std::vector<Vec2> contacts;
+
+    float faceDistance = r1 * refNormal;
+
+    float depth1 = i1 * refNormal - faceDistance;
+    float depth2 = i2 * refNormal - faceDistance;
+
+    if (depth1 <= info.overlap)
+        contacts.push_back(i1);
+
+    if (depth2 <= info.overlap && contacts.size() < 2)
+        contacts.push_back(i2);
+
+    return {
+        static_cast<int>(contacts.size()),
+        contacts
+    };
+}
+
+AABB getAABB(const std::vector<Vec2>& polygon)
+{
+    AABB box;
+
+    box.min = polygon[0];
+    box.max = polygon[0];
+
+    for (int i = 1; i < polygon.size(); i++)
+    {
+        box.min.x = std::min(box.min.x, polygon[i].x);
+        box.min.y = std::min(box.min.y, polygon[i].y);
+
+        box.max.x = std::max(box.max.x, polygon[i].x);
+        box.max.y = std::max(box.max.y, polygon[i].y);
+    }
+
+    return box;
+}
+
+bool AABBcollision(const AABB& A, const AABB& B)
+{
+    if (A.max.x < B.min.x || A.min.x > B.max.x)
+        return false;
+
+    if (A.max.y < B.min.y || A.min.y > B.max.y)
+        return false;
+
+    return true;
+}
+
+#endif
