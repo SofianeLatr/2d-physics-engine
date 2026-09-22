@@ -1,31 +1,35 @@
-#ifndef Polygon_h
-#define Polygon_h
+#ifndef POLYGON_HPP
+#define POLYGON_HPP
 
 #include "Body.hpp"
-#include <array>
+#include <vector>
 
-template<int N>
 class Polygon : public Body {
 public:
-    static const int verticies = N;
-    std::array<Vec2, N> points;
+    std::vector<Vec2> points;
 
-    const std::array<Vec2, N>& getPoints();
-    
     Polygon(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic);
-    ~Polygon();
+    virtual ~Polygon();
+
+    virtual const std::vector<Vec2>& getPoints();
 };
 
-class Rect : public Polygon<4> {
+class Rect : public Polygon {
 public:
-    std::array<Vec2, 4> points;
     Vec2 size;
 
-    ~Rect(){};
-    Rect(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic);    
+    Rect(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic);
+    ~Rect() override;
 
-    const std::array<Vec2, 4>& getPoints();
-    const float getInertia() { return (1.0f / 12.0f) * mass * (size.x * size.x + size.y * size.y); };
+    const std::vector<Vec2>& updatePoints();
+    const std::vector<Vec2>& getPoints() override {
+        return updatePoints();
+    }
+
+    float getInertia() {
+        return (1.0f / 12.0f) * mass *
+               (size.x * size.x + size.y * size.y);
+    }
 };
 
 #endif
