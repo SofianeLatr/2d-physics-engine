@@ -115,6 +115,17 @@ void Simulation::applyForces() {
         body->angVel += angAcceleration * dt;
     }
 }
+
+void Simulation::updatePositions() {
+    for(auto body : bodies) {
+        if(body->isStatic)
+            continue;
+
+        body->pos += body->vel * dt;
+        body->angle += body->angVel * dt;
+    }
+}
+
 int Simulation::main() {
 
     std::vector<Vec2> A = {
