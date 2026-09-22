@@ -52,10 +52,55 @@ void Simulation::checkCollisions() {
             if(info.overlap > 0) {
                 auto contacts = getContactPoints(info);
 
-                collisionPairs.push_back(std::make_pair(A, B));
+                collisionPairs.push_back(info);
             }
         }
     }
+}
+
+void Simulation::solveConstrains() {
+    for(auto info : collisionPairs) {
+        Body* A = info.A;
+        Body* B = info.B;
+
+        if(info.overlap > 0) {
+            auto contacts = getContactPoints(info);
+
+            for(int i = 0; i < contacts.first; i++) {
+                Vec2 contactPoint = contacts.second[i];
+
+                Vec2 rA = contactPoint - A->pos;
+                Vec2 rB = contactPoint - B->pos;
+
+                Vec2 relativeVel =
+                    (B->vel + Vec2(-B->angVel * rB.y, B->angVel * rB.x)) -
+                    (A->vel + Vec2(-A->angVel * rA.y, A->angVel * rA.x));
+
+                float velAlongNormal = relativeVel * info.normal;
+
+                if(velAlongNormal > 0)
+                    continue;
+
+                float e = 0.5f;
+
+                float j = -(1 + e) * velAlongNormal;
+
+                j /= A->invMass + B->invMass +
+                     (rA.cross(info.normal) * rA.cross(info.normal)) * A->invInertia +
+                     (rB.cross(info.normal) * rB.cross(info.normal)) * B->invInertia;
+
+                Vec2 impulse = info.normal * j;
+
+                A->vel -= impulse * A->invMass;
+                A->angVel -= rA.cross(impulse) * A->invInertia;
+
+                B->vel += impulse * B->invMass;
+                B->angVel += rB.cross(impulse) * B->invInertia;
+            }
+        }
+    }
+
+    collisionPairs.clear();
 }
 
 int Simulation::main() {
