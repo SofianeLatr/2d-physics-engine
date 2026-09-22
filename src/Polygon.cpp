@@ -8,10 +8,6 @@ Rect::Rect(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic) : Polygo
     inertia = this->getInertia();
 };
 
-const std::vector<Vec2>& Polygon::getPoints()  {
-    return points;
-}
-
 const std::vector<Vec2>& Rect::updatePoints()
 {
     if (points.empty())
