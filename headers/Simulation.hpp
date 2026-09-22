@@ -9,7 +9,7 @@ class Simulation {
 public:
 
     std::vector<Body*> bodies;
-    std::vector<std::pair<Body*, Body*>> collisionPairs;
+    std::vector<CollisionInfo> collisionPairs;
 
     float dt;
     int iterations = 10;
