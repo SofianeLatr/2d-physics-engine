@@ -1,14 +1,18 @@
-#ifndef ColisionDetection_HPP
-#define ColisionDetection_HPP
+#ifndef COLLISIONDETECTION_HPP
+#define COLLISIONDETECTION_HPP
 
 #include "Vec2.hpp"
 #include "Polygon.hpp"
 #include "BroadPhaseMath.hpp"
-#include <array>
+
+#include <vector>
 #include <algorithm>
-#include <limits>
+#include <utility>
 
 struct CollisionInfo {
+    const Polygon* A;
+    const Polygon* B;
+
     float overlap;
     Vec2 normal;
 
@@ -16,46 +20,56 @@ struct CollisionInfo {
     bool referenceIsA;
 };
 
-
-template<int verticesA, int verticesB>
-CollisionInfo SAT(
-    const std::array<Vec2, verticesA>& A,
-    const std::array<Vec2, verticesB>& B)
+CollisionInfo SAT(const Polygon& A, const Polygon& B)
 {
+    const std::vector<Vec2>& pointsA = const_cast<Polygon&>(A).getPoints();
+    const std::vector<Vec2>& pointsB = const_cast<Polygon&>(B).getPoints();
+
     float minOverlap = 0;
     Vec2 normal;
     int referenceEdge = 0;
     bool referenceIsA = true;
     bool first = true;
 
-    // Check A's edges
-    for (int i = 0; i < verticesA; i++)
+    for (int i = 0; i < pointsA.size(); i++)
     {
-        Vec2 edge = A[(i + 1) % verticesA] - A[i];
+        Vec2 edge = pointsA[(i + 1) % pointsA.size()] - pointsA[i];
         Vec2 axis = edge.normal();
+        axis.normalize();
 
-        float minA = A[0] * axis;
+        float minA = pointsA[0] * axis;
         float maxA = minA;
 
-        for (const Vec2& point : A)
+        for (const Vec2& point : pointsA)
         {
-            float p = point * axis;
-            minA = std::min(minA, p);
-            maxA = std::max(maxA, p);
+            float projection = point * axis;
+
+            minA = std::min(minA, projection);
+            maxA = std::max(maxA, projection);
         }
 
-        float minB = B[0] * axis;
+        float minB = pointsB[0] * axis;
         float maxB = minB;
 
-        for (const Vec2& point : B)
+        for (const Vec2& point : pointsB)
         {
-            float p = point * axis;
-            minB = std::min(minB, p);
-            maxB = std::max(maxB, p);
+            float projection = point * axis;
+
+            minB = std::min(minB, projection);
+            maxB = std::max(maxB, projection);
         }
 
         if (maxA < minB || maxB < minA)
-            return {0, Vec2(0, 0), -1, true};
+        {
+            return {
+                &A,
+                &B,
+                0,
+                Vec2(0, 0),
+                -1,
+                true
+            };
+        }
 
         float overlap = std::min(maxA, maxB) -
                         std::max(minA, minB);
@@ -70,33 +84,45 @@ CollisionInfo SAT(
         }
     }
 
-    for (int i = 0; i < verticesB; i++)
+    for (int i = 0; i < pointsB.size(); i++)
     {
-        Vec2 edge = B[(i + 1) % verticesB] - B[i];
+        Vec2 edge = pointsB[(i + 1) % pointsB.size()] - pointsB[i];
         Vec2 axis = edge.normal();
+        axis.normalize();
 
-        float minA = A[0] * axis;
+        float minA = pointsA[0] * axis;
         float maxA = minA;
 
-        for (const Vec2& point : A)
+        for (const Vec2& point : pointsA)
         {
-            float p = point * axis;
-            minA = std::min(minA, p);
-            maxA = std::max(maxA, p);
+            float projection = point * axis;
+
+            minA = std::min(minA, projection);
+            maxA = std::max(maxA, projection);
         }
 
-        float minB = B[0] * axis;
+        float minB = pointsB[0] * axis;
         float maxB = minB;
 
-        for (const Vec2& point : B)
+        for (const Vec2& point : pointsB)
         {
-            float p = point * axis;
-            minB = std::min(minB, p);
-            maxB = std::max(maxB, p);
+            float projection = point * axis;
+
+            minB = std::min(minB, projection);
+            maxB = std::max(maxB, projection);
         }
 
         if (maxA < minB || maxB < minA)
-            return {0, Vec2(0, 0), -1, false};
+        {
+            return {
+                &A,
+                &B,
+                0,
+                Vec2(0, 0),
+                -1,
+                false
+            };
+        }
 
         float overlap = std::min(maxA, maxB) -
                         std::max(minA, minB);
@@ -111,12 +137,14 @@ CollisionInfo SAT(
         }
     }
 
-    Vec2 direction = B[0] - A[0];
+    Vec2 direction = B.pos - A.pos;
 
     if (direction * normal < 0)
         normal *= -1;
 
     return {
+        &A,
+        &B,
         minOverlap,
         normal,
         referenceEdge,
@@ -124,14 +152,18 @@ CollisionInfo SAT(
     };
 }
 
-template<int verticesA, int verticesB>
-std::pair<int, std::array<Vec2, 2>> getContactPoints(
-    const std::array<Vec2, verticesA>& A,
-    const std::array<Vec2, verticesB>& B,
+std::pair<int, std::vector<Vec2>> getContactPoints(
     const CollisionInfo& info)
 {
-    const auto& reference = info.referenceIsA ? A : B;
-    const auto& incident = info.referenceIsA ? B : A;
+    const std::vector<Vec2>& reference =
+        info.referenceIsA
+            ? const_cast<Polygon*>(info.A)->Polygon::getPoints()
+            : const_cast<Polygon*>(info.B)->Polygon::getPoints();
+
+    const std::vector<Vec2>& incident =
+        info.referenceIsA
+            ? const_cast<Polygon*>(info.B)->Polygon::getPoints()
+            : const_cast<Polygon*>(info.A)->Polygon::getPoints();
 
     int edge = info.referenceEdge;
 
@@ -148,13 +180,17 @@ std::pair<int, std::array<Vec2, 2>> getContactPoints(
 
     for (int i = 0; i < incident.size(); i++)
     {
-        Vec2 e = incident[(i + 1) % incident.size()] - incident[i];
-        Vec2 n = e.normal();
-        float d = n * refNormal;
+        Vec2 edgeVector =
+            incident[(i + 1) % incident.size()] - incident[i];
 
-        if (d < minDot)
+        Vec2 normal = edgeVector.normal();
+        normal.normalize();
+
+        float dot = normal * refNormal;
+
+        if (dot < minDot)
         {
-            minDot = d;
+            minDot = dot;
             incidentEdge = i;
         }
     }
@@ -184,18 +220,21 @@ std::pair<int, std::array<Vec2, 2>> getContactPoints(
 
     if (offset1 > maxOffset)
     {
-        float t = (offset1 - maxOffset) / (offset1 - offset2);
+        float t = (offset1 - maxOffset) /
+                  (offset1 - offset2);
+
         i1 = i1 + (i2 - i1) * t;
     }
 
     if (offset2 > maxOffset)
     {
-        float t = (offset2 - maxOffset) / (offset2 - offset1);
+        float t = (offset2 - maxOffset) /
+                  (offset2 - offset1);
+
         i2 = i2 + (i1 - i2) * t;
     }
 
-    std::array<Vec2, 2> contacts;
-    int count = 0;
+    std::vector<Vec2> contacts;
 
     float faceDistance = r1 * refNormal;
 
@@ -203,24 +242,29 @@ std::pair<int, std::array<Vec2, 2>> getContactPoints(
     float depth2 = i2 * refNormal - faceDistance;
 
     if (depth1 <= info.overlap)
-        contacts[count++] = i1;
+        contacts.push_back(i1);
 
-    if (depth2 <= info.overlap && count < 2)
-        contacts[count++] = i2;
+    if (depth2 <= info.overlap && contacts.size() < 2)
+        contacts.push_back(i2);
 
-    return {count, contacts};
+    return {
+        static_cast<int>(contacts.size()),
+        contacts
+    };
 }
 
-template<int N>
-AABB getAABB(const std::array<Vec2, N>& polygon)
+AABB getAABB(const std::vector<Vec2>& polygon)
 {
     AABB box;
+
     box.min = polygon[0];
     box.max = polygon[0];
 
-    for(int i = 1; i < N; i++) {
+    for (int i = 1; i < polygon.size(); i++)
+    {
         box.min.x = std::min(box.min.x, polygon[i].x);
         box.min.y = std::min(box.min.y, polygon[i].y);
+
         box.max.x = std::max(box.max.x, polygon[i].x);
         box.max.y = std::max(box.max.y, polygon[i].y);
     }
@@ -230,14 +274,13 @@ AABB getAABB(const std::array<Vec2, N>& polygon)
 
 bool AABBcollision(const AABB& A, const AABB& B)
 {
-    if(A.max.x < B.min.x || A.min.x > B.max.x)
+    if (A.max.x < B.min.x || A.min.x > B.max.x)
         return false;
 
-    if(A.max.y < B.min.y || A.min.y > B.max.y)
+    if (A.max.y < B.min.y || A.min.y > B.max.y)
         return false;
 
     return true;
 }
-
 
 #endif
