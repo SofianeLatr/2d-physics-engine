@@ -24,18 +24,20 @@ void AABBTree::remove(AABBNode* node)
     delete node;
 }
 
-void AABBTree::update(AABBNode* node,const AABB& box)
+AABBNode* AABBTree::update(AABBNode* node,const AABB& box)
 {
+    if (node == nullptr)
+        return nullptr;
     if(node->box.min.x <= box.min.x &&
        node->box.min.y <= box.min.y &&
        node->box.max.x >= box.max.x &&
        node->box.max.y >= box.max.y)
-        return;
+        return node;
 
     Body* body = node->body;
 
     remove(node);
-    insert(body,box);
+    return insert(body,box);
 }
 
 void AABBTree::query(const AABB& box,std::vector<Body*>& bodies)
