@@ -2,6 +2,7 @@
 #define Body_h
 
 #include "Vec2.hpp"
+#include <stdexcept>
 
 class Shape{
 public:
@@ -10,7 +11,7 @@ public:
     bool isStatic = false;
     bool polygon = true;
 
-    ~Shape() {};
+    virtual ~Shape() = default;
     Shape(Vec2 pos, float angle, bool isStatic) : pos(pos), angle(angle), isStatic(isStatic) {};
 
 };
@@ -29,14 +30,16 @@ public:
     Vec2 force;
     float torque;
 
-    ~Body(){};
+    ~Body() override = default;
     Body(Vec2 pos, float angle, float mass, bool isStatic) : Shape(pos, angle, isStatic), mass(mass){
         if (isStatic) {
-            mass = 0;
+            this->mass = 0;
             invMass = 0;
             inertia = 0;
             invInertia = 0;
         } else {
+            if (!(mass > 0))
+                throw std::invalid_argument("Dynamic body mass must be positive");
             invMass = 1.0f / mass;
             inertia = mass;
             invInertia = 1.0f / inertia;

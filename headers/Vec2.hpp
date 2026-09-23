@@ -18,7 +18,8 @@ public:
     float cross(Vec2 other) { return x*other.y-y*other.x; }
     float distance(Vec2 other) {return std::sqrt((x-other.x)*(x-other.x)+(y-other.y)*(y-other.y));}
     float length() {return std::sqrt(x*x+y*y);}
-    Vec2 normalize();
+    // Normalize this vector in place. A zero vector remains unchanged.
+    Vec2& normalize();
 };
 
 inline Vec2 operator *(float a,Vec2 b) { return Vec2(a*b.x,a*b.y); }
