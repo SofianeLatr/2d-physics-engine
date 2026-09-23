@@ -5,10 +5,23 @@ Simulation::~Simulation() {}
 Simulation::Simulation() {}
 
 void Simulation::addBody(Body* body) {
-    bodies.push_back(body);
+    if (body != nullptr)
+        bodies.push_back(body);
+}
+
+void Simulation::removeBody(Body* body) {
+    bodies.erase(std::remove(bodies.begin(), bodies.end(), body), bodies.end());
+    collisionPairs.erase(
+        std::remove_if(collisionPairs.begin(), collisionPairs.end(),
+            [body](const CollisionInfo& info) {
+                return info.A == body || info.B == body;
+            }),
+        collisionPairs.end());
 }
 
 void Simulation::simulate(float dt) {
+    if (iterations <= 0 || dt <= 0)
+        return;
     this->dt = dt;
     this->dt /= (float)iterations;
 
@@ -26,6 +39,7 @@ void Simulation::simulate(float dt) {
 }
 
 void Simulation::checkCollisions() {
+    collisionPairs.clear();
     for(int i = 0; i < bodies.size(); i++) {
         for(int j = i + 1; j < bodies.size(); j++) {
 
@@ -35,8 +49,10 @@ void Simulation::checkCollisions() {
             if(A->isStatic && B->isStatic)
                 continue;
 
-            Polygon* polyA = static_cast<Polygon*>(A);
-            Polygon* polyB = static_cast<Polygon*>(B);
+            Polygon* polyA = dynamic_cast<Polygon*>(A);
+            Polygon* polyB = dynamic_cast<Polygon*>(B);
+            if (polyA == nullptr || polyB == nullptr)
+                continue;
 
             const std::vector<Vec2>& pointsA = polyA->getPoints();
             const std::vector<Vec2>& pointsB = polyB->getPoints();
@@ -104,9 +120,14 @@ void Simulation::solveConstrains() {
 }
 
 void Simulation::applyForces() {
+
     for(auto body : bodies) {
         if(body->isStatic)
             continue;
+
+        //gravity
+        Vec2 gravity(0, 9.81f);
+        body->force += gravity * body->mass;
 
         Vec2 acceleration = body->force * body->invMass;
         float angAcceleration = body->torque * body->invInertia;
@@ -142,6 +163,7 @@ int Simulation::main() {
         Vec2(0, 1)
     };
 
+    
     std::cin.get();
 
     return 0;
