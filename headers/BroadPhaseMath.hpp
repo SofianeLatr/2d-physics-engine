@@ -31,7 +31,7 @@ public:
 
     AABBNode* insert(Body* body,const AABB& box);
     void remove(AABBNode* node);
-    void update(AABBNode* node,const AABB& box);
+    AABBNode* update(AABBNode* node,const AABB& box);
     void query(const AABB& box,std::vector<Body*>& bodies);
 
 private:
