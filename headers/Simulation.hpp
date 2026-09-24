@@ -26,7 +26,7 @@ public:
     void applyForces();
     void updatePositions();
 
-    int main();
+    int runDemo();
 };
 
 #endif

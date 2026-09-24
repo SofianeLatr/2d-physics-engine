@@ -66,8 +66,6 @@ void Simulation::checkCollisions() {
             CollisionInfo info = SAT(*polyA, *polyB);
 
             if(info.overlap > 0) {
-                auto contacts = getContactPoints(info);
-
                 collisionPairs.push_back(info);
             }
         }
@@ -113,6 +111,17 @@ void Simulation::solveConstrains() {
                 B->vel += impulse * B->invMass;
                 B->angVel += rB.cross(impulse) * B->invInertia;
             }
+
+            const float penetrationSlop = 0.01f;
+            const float correctionPercent = 0.8f;
+            float inverseMassSum = A->invMass + B->invMass;
+            if (inverseMassSum > 0.0f && info.overlap > penetrationSlop) {
+                float correctionDepth =
+                    (info.overlap - penetrationSlop) * correctionPercent / inverseMassSum;
+                Vec2 correction = info.normal * correctionDepth;
+                A->pos -= correction * A->invMass;
+                B->pos += correction * B->invMass;
+            }
         }
     }
 
@@ -127,9 +136,7 @@ void Simulation::applyForces() {
 
         //gravity
         Vec2 gravity(0, 9.81f);
-        body->force += gravity * body->mass;
-
-        Vec2 acceleration = body->force * body->invMass;
+        Vec2 acceleration = body->force * body->invMass + gravity;
         float angAcceleration = body->torque * body->invInertia;
 
         body->vel += acceleration * dt;
@@ -147,24 +154,43 @@ void Simulation::updatePositions() {
     }
 }
 
-int Simulation::main() {
+int Simulation::runDemo() {
 
-    std::vector<Vec2> A = {
-        Vec2(-1, -1),
-        Vec2(1, -1),
-        Vec2(1, 1),
-        Vec2(-1, 1)
-    };
+    // Positive y points down in this engine, so the ground sits below the
+    // falling rectangles.
+    Rect first(Vec2(-1.5f, 0.0f), Vec2(2.0f, 1.0f), -0.35f, 2.0f, false);
+    Rect second(Vec2(1.5f, -2.0f), Vec2(2.0f, 1.0f), 0.40f, 2.0f, false);
+    Rect ground(Vec2(0.0f, 8.0f), Vec2(14.0f, 1.0f), 0.0f, 0.0f, true);
 
-    std::vector<Vec2> B = {
-        Vec2(0, -1),
-        Vec2(2, -1),
-        Vec2(2, 1),
-        Vec2(0, 1)
-    };
+    addBody(&first);
+    addBody(&second);
+    addBody(&ground);
 
-    
-    std::cin.get();
+    const float frameDt = 1.0f / 30.0f;
+    const int frameCount = 9999;
+    std::cout << "frame, first (x, y, angle), second (x, y, angle)\n";
+
+    for (int frame = 0; frame <= frameCount; ++frame) {
+        if (frame % 60 == 0) {
+            std::cout << frame << ", (" << first.pos.x << ", " << first.pos.y
+                      << ", " << first.angle << "), (" << second.pos.x << ", "
+                      << second.pos.y << ", " << second.angle << ")\n";
+        }
+
+        if (frame < frameCount)
+            simulate(frameDt);
+    }
 
     return 0;
+}
+
+int main() {
+    Simulation simulation;
+    
+    simulation.runDemo();
+
+    std::cin.get();
+    
+    return 0;
+
 }
