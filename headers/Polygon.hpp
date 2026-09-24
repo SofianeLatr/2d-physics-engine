@@ -11,7 +11,7 @@ public:
     Polygon(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic);
     virtual ~Polygon();
 
-    virtual const std::vector<Vec2>& getPoints() const {
+    virtual const std::vector<Vec2>& getPoints() {
         return points;
     }
 };
@@ -24,7 +24,7 @@ public:
     ~Rect() override;
 
     const std::vector<Vec2>& updatePoints();
-    const std::vector<Vec2>& getPoints() {
+    const std::vector<Vec2>& getPoints() override {
         return updatePoints();
     }
 
