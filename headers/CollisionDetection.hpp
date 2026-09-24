@@ -69,8 +69,7 @@ CollisionInfo SAT(Polygon& A, Polygon& B)
             };
         }
 
-        float overlap = std::min(maxA, maxB) -
-                        std::max(minA, minB);
+        float overlap = std::min(maxA - minB, maxB - minA);
 
         if (first || overlap < minOverlap)
         {
@@ -120,8 +119,7 @@ CollisionInfo SAT(Polygon& A, Polygon& B)
             };
         }
 
-        float overlap = std::min(maxA, maxB) -
-                        std::max(minA, minB);
+        float overlap = std::min(maxA - minB, maxB - minA);
 
         if (first || overlap < minOverlap)
         {
@@ -137,6 +135,27 @@ CollisionInfo SAT(Polygon& A, Polygon& B)
 
     if (direction * normal < 0)
         normal *= -1;
+
+    // The normal is oriented from A to B, but SAT only identifies an axis.
+    // Pick the face on the reference polygon that actually faces the other
+    // polygon. Polygon edge normals point inward for this vertex order.
+    const std::vector<Vec2>& referencePoints =
+        referenceIsA ? pointsA : pointsB;
+    Vec2 referenceInward = referenceIsA ? normal * -1.0f : normal;
+    float bestAlignment = -999999.0f;
+    for (int i = 0; i < referencePoints.size(); ++i)
+    {
+        Vec2 edge = referencePoints[(i + 1) % referencePoints.size()] -
+                    referencePoints[i];
+        Vec2 inward = edge.normal();
+        inward.normalize();
+        float alignment = inward * referenceInward;
+        if (alignment > bestAlignment)
+        {
+            bestAlignment = alignment;
+            referenceEdge = i;
+        }
+    }
 
     return {
         &A,
@@ -166,13 +185,13 @@ std::pair<int, std::vector<Vec2>> getContactPoints(
     Vec2 r1 = reference[edge];
     Vec2 r2 = reference[(edge + 1) % reference.size()];
 
-    Vec2 refNormal = info.normal;
+    Vec2 refNormal = info.referenceIsA ? info.normal : info.normal * -1.0f;
 
     Vec2 side = r2 - r1;
     side.normalize();
 
     int incidentEdge = 0;
-    float minDot = 999999;
+    float maxDot = -999999;
 
     for (int i = 0; i < incident.size(); i++)
     {
@@ -184,9 +203,9 @@ std::pair<int, std::vector<Vec2>> getContactPoints(
 
         float dot = normal * refNormal;
 
-        if (dot < minDot)
+        if (dot > maxDot)
         {
-            minDot = dot;
+            maxDot = dot;
             incidentEdge = i;
         }
     }
@@ -237,10 +256,10 @@ std::pair<int, std::vector<Vec2>> getContactPoints(
     float depth1 = i1 * refNormal - faceDistance;
     float depth2 = i2 * refNormal - faceDistance;
 
-    if (depth1 <= info.overlap)
+    if (depth1 <= 0 && depth1 >= -info.overlap)
         contacts.push_back(i1);
 
-    if (depth2 <= info.overlap && contacts.size() < 2)
+    if (depth2 <= 0 && depth2 >= -info.overlap && contacts.size() < 2)
         contacts.push_back(i2);
 
     return {
