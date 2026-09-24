@@ -3,6 +3,7 @@
 
 Polygon::~Polygon() {};
 Polygon::Polygon(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic) : Body(pos, angle, mass, isStatic) {};
+Rect::~Rect() = default;
 Rect::Rect(Vec2 pos, Vec2 size, float angle, float mass, bool isStatic) : Polygon(pos, size, angle, mass, isStatic), size(size) {
     this->getPoints();
     if (!isStatic) {
@@ -25,7 +26,7 @@ const std::vector<Vec2>& Rect::updatePoints()
     {
         // Rebuild from local-space vertices so repeated queries never transform
         // already transformed world-space points.
-        static const Vec2 localPoints[4] = {
+        const Vec2 localPoints[4] = {
             Vec2(-size.x / 2, -size.y / 2), Vec2(size.x / 2, -size.y / 2),
             Vec2(size.x / 2, size.y / 2), Vec2(-size.x / 2, size.y / 2)
         };
