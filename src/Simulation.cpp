@@ -154,10 +154,8 @@ void Simulation::updatePositions() {
     }
 }
 
-int Simulation::runDemo() {
-
-    // Positive y points down in this engine, so the ground sits below the
-    // falling rectangles.
+int Simulation::runDemo()
+{
     Rect first(Vec2(-1.5f, 0.0f), Vec2(2.0f, 1.0f), -0.35f, 2.0f, false);
     Rect second(Vec2(1.5f, -2.0f), Vec2(2.0f, 1.0f), 0.40f, 2.0f, false);
     Rect ground(Vec2(0.0f, 8.0f), Vec2(14.0f, 1.0f), 0.0f, 0.0f, true);
@@ -166,19 +164,67 @@ int Simulation::runDemo() {
     addBody(&second);
     addBody(&ground);
 
-    const float frameDt = 1.0f / 30.0f;
-    const int frameCount = 9999;
-    std::cout << "frame, first (x, y, angle), second (x, y, angle)\n";
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Physics Engine");
 
-    for (int frame = 0; frame <= frameCount; ++frame) {
-        if (frame % 60 == 0) {
-            std::cout << frame << ", (" << first.pos.x << ", " << first.pos.y
-                      << ", " << first.angle << "), (" << second.pos.x << ", "
-                      << second.pos.y << ", " << second.angle << ")\n";
+    sf::Clock clock;
+
+    while (window.isOpen())
+    {
+        sf::Event event;
+
+        while (window.pollEvent(event))
+        {
+            if (event.type == sf::Event::Closed)
+                window.close();
         }
 
-        if (frame < frameCount)
-            simulate(frameDt);
+        float dt = clock.restart().asSeconds();
+
+        if (dt > 0.033f)
+            dt = 0.033f;
+
+        simulate(dt);
+
+        window.clear(sf::Color::Black);
+
+        // Draw first rectangle
+        sf::RectangleShape shape1;
+        shape1.setSize(sf::Vector2f(first.size.x * 50, first.size.y * 50));
+        shape1.setOrigin(shape1.getSize() / 2.0f);
+        shape1.setPosition(
+            400 + first.pos.x * 50,
+            100 + first.pos.y * 50
+        );
+        shape1.setRotation(first.angle * 180.0f / 3.14159265f);
+        shape1.setFillColor(sf::Color::Red);
+
+        // Draw second rectangle
+        sf::RectangleShape shape2;
+        shape2.setSize(sf::Vector2f(second.size.x * 50, second.size.y * 50));
+        shape2.setOrigin(shape2.getSize() / 2.0f);
+        shape2.setPosition(
+            400 + second.pos.x * 50,
+            100 + second.pos.y * 50
+        );
+        shape2.setRotation(second.angle * 180.0f / 3.14159265f);
+        shape2.setFillColor(sf::Color::Green);
+
+        // Draw ground
+        sf::RectangleShape groundShape;
+        groundShape.setSize(sf::Vector2f(ground.size.x * 50, ground.size.y * 50));
+        groundShape.setOrigin(groundShape.getSize() / 2.0f);
+        groundShape.setPosition(
+            400 + ground.pos.x * 50,
+            100 + ground.pos.y * 50
+        );
+        groundShape.setRotation(ground.angle * 180.0f / 3.14159265f);
+        groundShape.setFillColor(sf::Color::White);
+
+        window.draw(shape1);
+        window.draw(shape2);
+        window.draw(groundShape);
+
+        window.display();
     }
 
     return 0;
